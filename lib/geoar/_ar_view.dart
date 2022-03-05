@@ -14,23 +14,18 @@ class _ArViewState extends State<ArView> {
   Widget build(BuildContext context) {
     return ArCoreView(
       onArCoreViewCreated: _onArCoreViewCreated,
+      type: ArCoreViewType.STANDARDVIEW,
       enableTapRecognizer: true,
     );
   }
 
   void _onArCoreViewCreated(ArCoreController controller) {
     arCoreController = controller;
-    _addCylindre(arCoreController);
-    arCoreController.onNodeTap = (name) => onTapHandler(name);
-    arCoreController.onPlaneDetected = (plane) => planDetected(plane);
-  }
 
-  void planDetected(ArCorePlane plane) {
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) =>
-          const AlertDialog(content: Text('Plane is detected')),
-    );
+    _addSphere(arCoreController);
+    _addCylindre(arCoreController);
+    _addCube(arCoreController);
+    arCoreController.onNodeTap = (name) => onTapHandler(name);
   }
 
   void onTapHandler(String name) {
@@ -39,6 +34,19 @@ class _ArViewState extends State<ArView> {
       builder: (BuildContext context) =>
           AlertDialog(content: Text('onNodeTap on $name')),
     );
+  }
+
+  void _addSphere(ArCoreController controller) {
+    final material = ArCoreMaterial(color: Color.fromARGB(120, 66, 134, 244));
+    final sphere = ArCoreSphere(
+      materials: [material],
+      radius: 0.1,
+    );
+    final node = ArCoreNode(
+      shape: sphere,
+      position: vector.Vector3(0, 0, -1.5),
+    );
+    controller.addArCoreNode(node);
   }
 
   void _addCylindre(ArCoreController controller) {
@@ -54,6 +62,22 @@ class _ArViewState extends State<ArView> {
     final node = ArCoreNode(
       shape: cylindre,
       position: vector.Vector3(0.0, -0.5, -2.0),
+    );
+    controller.addArCoreNode(node);
+  }
+
+  void _addCube(ArCoreController controller) {
+    final material = ArCoreMaterial(
+      color: Color.fromARGB(120, 66, 134, 244),
+      metallic: 1.0,
+    );
+    final cube = ArCoreCube(
+      materials: [material],
+      size: vector.Vector3(0.5, 0.5, 0.5),
+    );
+    final node = ArCoreNode(
+      shape: cube,
+      position: vector.Vector3(-0.5, 0.5, -3.5),
     );
     controller.addArCoreNode(node);
   }

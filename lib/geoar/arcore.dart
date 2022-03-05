@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:arway/geoar/ar_view.dart';
+import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
 
 import 'info.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
@@ -32,6 +33,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
   double targetDegree = 0;
   Timer timer;
   TtsState ttsState = TtsState.stopped;
+  ArCoreController arCoreController;
 
   //calculation formula of angel between 2 different points
   double angleFromCoordinate(
@@ -116,6 +118,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
   @override
   void dispose() {
     arkitController?.dispose();
+    arCoreController.dispose();
     flutterTts.stop();
     super.dispose();
   }
@@ -149,16 +152,16 @@ class _ArCoreMainState extends State<ArCoreMain> {
       body: distanceProvider(),
       floatingActionButton: compassProvider());
 
+// WidgetDistance.ready & if ? distance < 50
   Widget readyWidget() {
     return Container(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Text('AR Scene Rendring'),
-          // ARKitSceneView(
-          //   detectionImagesGroupName: 'AR Resources',
-          //   onARKitViewCreated: onARKitViewCreated,
-          // ),
+          ArCoreView(
+            onArCoreViewCreated: _onArCoreViewCreated,
+            enableTapRecognizer: true,
+          ),
           anchorWasFound
               ? Container()
               : Column(
@@ -169,12 +172,16 @@ class _ArCoreMainState extends State<ArCoreMain> {
     );
   }
 
+// WidgetDistance.navigating& else ? distance < 50
   Widget navigateWidget() {
     return Container(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ArView(),
+          ArCoreView(
+            onArCoreViewCreated: _onArCoreViewCreated,
+            enableTapRecognizer: true,
+          ),
           anchorWasFound
               ? Container()
               : Column(
@@ -197,6 +204,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
     );
   }
 
+// WidgetCompass.scanning & distance < 50
   Widget scanningWidget() {
     return FloatingActionButton(
       backgroundColor: Colors.blue,
@@ -214,6 +222,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
     );
   }
 
+// WidgetCompass.directing && else ? distance < 50
   Widget directingWidget() {
     return FloatingActionButton(
       backgroundColor: Colors.blue,
@@ -285,5 +294,46 @@ class _ArCoreMainState extends State<ArCoreMain> {
       );
       arkitController.add(node);
     }
+  }
+
+// ARCORE
+  void _onArCoreViewCreated(ArCoreController controller) {
+    arCoreController = controller;
+    _addCylindre(arCoreController);
+    arCoreController.onNodeTap = (name) => onTapHandler(name);
+    arCoreController.onPlaneDetected = (plane) => planDetected(plane);
+  }
+
+  void planDetected(ArCorePlane plane) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) =>
+          const AlertDialog(content: Text('Plane is detected')),
+    );
+  }
+
+  void onTapHandler(String name) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) =>
+          AlertDialog(content: Text('onNodeTap on $name')),
+    );
+  }
+
+  void _addCylindre(ArCoreController controller) {
+    final material = ArCoreMaterial(
+      color: Colors.red,
+      reflectance: 1.0,
+    );
+    final cylindre = ArCoreCylinder(
+      materials: [material],
+      radius: 0.5,
+      height: 0.3,
+    );
+    final node = ArCoreNode(
+        shape: cylindre,
+        position: vector.Vector3(0.0, -0.5, -2.0),
+        name: "A Cylinder");
+    controller.addArCoreNode(node);
   }
 }

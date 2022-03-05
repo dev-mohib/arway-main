@@ -147,6 +147,7 @@ class _ImageDetectionPageState extends State<ImageDetectionPage> {
       body: distanceProvider(),
       floatingActionButton: compassProvider());
 
+// distance = ready.
   Widget readyWidget() {
     return Container(
       child: Stack(
@@ -197,6 +198,7 @@ class _ImageDetectionPageState extends State<ImageDetectionPage> {
     );
   }
 
+// compass = scanning
   Widget scanningWidget() {
     return FloatingActionButton(
       backgroundColor: Colors.blue,
