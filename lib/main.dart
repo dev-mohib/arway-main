@@ -1,8 +1,22 @@
-import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
-import 'package:arway/ar_view.dart';
+import 'package:arway/geoar/arcore.dart';
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math_64.dart' as vector;
 
 void main() {
-  runApp(ArView());
+  runApp(App());
+}
+
+class App extends StatelessWidget {
+  const App({Key key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Hello World'),
+        ),
+        body: ArCoreMain(),
+      ),
+    );
+  }
 }
