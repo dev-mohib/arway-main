@@ -35,6 +35,9 @@ class _ArCoreMainState extends State<ArCoreMain> {
   TtsState ttsState = TtsState.stopped;
   ArCoreController arCoreController;
 
+  double _facultypositionlat = 31.415273;
+  double _facultypositionlong = 74.246618;
+
   //calculation formula of angel between 2 different points
   double angleFromCoordinate(
       double lat1, double long1, double lat2, double long2) {
@@ -57,8 +60,8 @@ class _ArCoreMainState extends State<ArCoreMain> {
     await flutterTts.setPitch(1.0);
 
     if (_distance != 0) {
-      var result = await flutterTts
-          .speak('Distance of placed object is $_distance meters');
+      var result = await flutterTts.speak(
+          'Object $_distance meters dooor hai.'); //'Distance of placed object is $_distance meters'
       if (result == 1) setState(() => ttsState = TtsState.playing);
     }
   }
@@ -67,9 +70,11 @@ class _ArCoreMainState extends State<ArCoreMain> {
   void calculateDegree() {
     // direction type = double
     FlutterCompass.events.listen((dynamic direction) {
+      // showMsg('Getting angle for $direction');
       setState(() {
         if (targetDegree != null && direction != null) {
-          _clearDirection = targetDegree.truncate() - direction.truncate();
+          _clearDirection =
+              targetDegree.truncate() - direction?.heading?.truncate();
         }
       });
     });
@@ -80,9 +85,6 @@ class _ArCoreMainState extends State<ArCoreMain> {
     //if you want to check location service permissions use checkGeolocationPermissionStatus method
     Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
-
-    final double _facultypositionlat = 31.397497;
-    final double _facultypositionlong = 74.229385;
 
     distance = await Geolocator.distanceBetween(position.latitude,
         position.longitude, _facultypositionlat, _facultypositionlong);
@@ -97,7 +99,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
     super.initState();
     _getlocation(); //first run
     flutterTts = FlutterTts();
-    timer = new Timer.periodic(Duration(seconds: 7), (timer) {
+    timer = Timer.periodic(Duration(seconds: 7), (timer) {
       _getlocation();
       if (distance < 50 && distance != 0 && distance != null) {
         setState(() {
@@ -128,7 +130,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
       appBar: AppBar(
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Text('ArWay'),
+        title: Text('Target $_clearDirection'),
         actions: <Widget>[
           IconButton(
               icon: Icon(Icons.help),
@@ -136,7 +138,17 @@ class _ArCoreMainState extends State<ArCoreMain> {
                 showDialog(
                     context: context,
                     builder: (BuildContext context) => CustomDialog());
-              })
+              }),
+          IconButton(
+              onPressed: () async {
+                Position position = await Geolocator.getCurrentPosition(
+                    desiredAccuracy: LocationAccuracy.high);
+                setState(() {
+                  _facultypositionlat = position.latitude;
+                  _facultypositionlong = position.longitude;
+                });
+              },
+              icon: Icon(Icons.location_on))
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -159,7 +171,8 @@ class _ArCoreMainState extends State<ArCoreMain> {
         fit: StackFit.expand,
         children: [
           ArCoreView(
-            onArCoreViewCreated: _onArCoreViewCreated,
+            onArCoreViewCreated: (controler) =>
+                _onArCoreViewCreated(controler, Colors.green),
             enableTapRecognizer: true,
           ),
           anchorWasFound
@@ -172,39 +185,7 @@ class _ArCoreMainState extends State<ArCoreMain> {
     );
   }
 
-// WidgetDistance.navigating& else ? distance < 50
-  Widget navigateWidget() {
-    return Container(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ArCoreView(
-            onArCoreViewCreated: _onArCoreViewCreated,
-            enableTapRecognizer: true,
-          ),
-          anchorWasFound
-              ? Container()
-              : Column(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(' Object Distance : $_distance m.',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              backgroundColor: Colors.blueGrey,
-                              color: Colors.white)),
-                    ),
-                  ],
-                ),
-        ],
-      ),
-    );
-  }
-
-// WidgetCompass.scanning & distance < 50
+// WidgetCompass.scanning & if distance < 50
   Widget scanningWidget() {
     return FloatingActionButton(
       backgroundColor: Colors.blue,
@@ -219,6 +200,40 @@ class _ArCoreMainState extends State<ArCoreMain> {
             color: Colors.white,
             onPressed: () {},
           )),
+    );
+  }
+
+// WidgetDistance.navigating & else ? distance < 50
+  Widget navigateWidget() {
+    return Container(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ArCoreView(
+            onArCoreViewCreated: (controler) =>
+                _onArCoreViewCreated(controler, Colors.red),
+            enableTapRecognizer: true,
+            enableUpdateListener: true,
+          ),
+          anchorWasFound
+              ? Container()
+              : Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(' Object is : $_distance m away.',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              backgroundColor: Colors.blueGrey,
+                              color: Colors.white)),
+                    ),
+                  ],
+                ),
+        ],
+      ),
     );
   }
 
@@ -297,18 +312,27 @@ class _ArCoreMainState extends State<ArCoreMain> {
   }
 
 // ARCORE
-  void _onArCoreViewCreated(ArCoreController controller) {
+  void _onArCoreViewCreated(ArCoreController controller, Color clr) {
     arCoreController = controller;
-    _addCylindre(arCoreController);
+    _addCylindre(arCoreController, clr);
     arCoreController.onNodeTap = (name) => onTapHandler(name);
-    arCoreController.onPlaneDetected = (plane) => planDetected(plane);
+    // arCoreController.onPlaneDetected = (plane) => showMsg(plane, "Plane mil gya ha.");
   }
 
-  void planDetected(ArCorePlane plane) {
+  void showMsg(/*ArCorePlane plane,*/ String message) {
     showDialog<void>(
       context: context,
-      builder: (BuildContext context) =>
-          const AlertDialog(content: Text('Plane is detected')),
+      builder: (BuildContext context) => AlertDialog(
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Theek Hai!'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -320,9 +344,9 @@ class _ArCoreMainState extends State<ArCoreMain> {
     );
   }
 
-  void _addCylindre(ArCoreController controller) {
+  void _addCylindre(ArCoreController controller, Color clr) {
     final material = ArCoreMaterial(
-      color: Colors.red,
+      color: clr,
       reflectance: 1.0,
     );
     final cylindre = ArCoreCylinder(
