@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:arway/geoar/ar_view.dart';
 import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
+import 'package:maps_toolkit/maps_toolkit.dart';
 
 import 'info.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
@@ -38,22 +38,6 @@ class _ArCoreMainState extends State<ArCoreMain> {
   double _facultypositionlat = 31.415273;
   double _facultypositionlong = 74.246618;
 
-  //calculation formula of angel between 2 different points
-  double angleFromCoordinate(
-      double lat1, double long1, double lat2, double long2) {
-    double dLon = (long2 - long1);
-
-    double y = sin(dLon) * cos(lat2);
-    double x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
-
-    double brng = atan2(y, x);
-
-    brng = vector.degrees(brng);
-    brng = (brng + 360) % 360;
-    //brng = 360 - brng; //remove to make clockwise
-    return brng;
-  }
-
   Future _speak() async {
     await flutterTts.setVolume(1.0);
     await flutterTts.setSpeechRate(0.4);
@@ -89,8 +73,10 @@ class _ArCoreMainState extends State<ArCoreMain> {
     distance = await Geolocator.distanceBetween(position.latitude,
         position.longitude, _facultypositionlat, _facultypositionlong);
 
-    targetDegree = angleFromCoordinate(position.latitude, position.longitude,
-        _facultypositionlat, _facultypositionlong);
+    targetDegree = SphericalUtil.computeHeading(
+      LatLng(position.latitude, position.longitude),
+      LatLng(_facultypositionlat, _facultypositionlong),
+    );
     calculateDegree();
   }
 
@@ -112,9 +98,40 @@ class _ArCoreMainState extends State<ArCoreMain> {
           situationDistance = WidgetDistance.navigating;
           situationCompass = WidgetCompass.directing;
         });
-        _speak(); //Speak the distance
+        // _speak(); //Speak the distance
       }
     });
+  }
+
+  void _getHeading(Position position, {double azimuth = 0.0}) {
+    double heading = SphericalUtil.computeHeading(
+      LatLng(position.latitude, position.longitude),
+      LatLng(_facultypositionlat, _facultypositionlong),
+    );
+    // getPositionVector
+    double r = -2.0;
+    dynamic x = r * sin((azimuth + heading)).toDouble();
+    double y = 1.0;
+    dynamic z = r * cos((azimuth + heading)).toDouble();
+    vector.Vector3 _vector = vector.Vector3(x, y, z);
+
+    //
+
+    showMsg(heading.toString());
+  }
+
+  vector.Vector3 _getPositionVector(Position position, double azimuth) {
+    double heading = SphericalUtil.computeHeading(
+      LatLng(position.latitude, position.longitude),
+      LatLng(_facultypositionlat, _facultypositionlong),
+    );
+    // getPositionVector
+    double r = -2.0;
+    dynamic x = r * sin((azimuth + heading)).toDouble();
+    double y = 1.0;
+    dynamic z = r * cos((azimuth + heading)).toDouble();
+    vector.Vector3 _vector = vector.Vector3(x, y, z);
+    return _vector;
   }
 
   @override
@@ -143,10 +160,11 @@ class _ArCoreMainState extends State<ArCoreMain> {
               onPressed: () async {
                 Position position = await Geolocator.getCurrentPosition(
                     desiredAccuracy: LocationAccuracy.high);
-                setState(() {
-                  _facultypositionlat = position.latitude;
-                  _facultypositionlong = position.longitude;
-                });
+                // setState(() {
+                //   _facultypositionlat = position.latitude;
+                //   _facultypositionlong = position.longitude;
+                // });
+                _getHeading(position);
               },
               icon: Icon(Icons.location_on))
         ],
@@ -170,11 +188,13 @@ class _ArCoreMainState extends State<ArCoreMain> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ArCoreView(
-            onArCoreViewCreated: (controler) =>
-                _onArCoreViewCreated(controler, Colors.green),
-            enableTapRecognizer: true,
-          ),
+          false
+              ? ArCoreView(
+                  onArCoreViewCreated: (controler) =>
+                      _onArCoreViewCreated(controler, Colors.green),
+                  enableTapRecognizer: true,
+                )
+              : Center(child: Text('ArCore View')),
           anchorWasFound
               ? Container()
               : Column(
@@ -209,12 +229,16 @@ class _ArCoreMainState extends State<ArCoreMain> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ArCoreView(
-            onArCoreViewCreated: (controler) =>
-                _onArCoreViewCreated(controler, Colors.red),
-            enableTapRecognizer: true,
-            enableUpdateListener: true,
-          ),
+          false
+              ? ArCoreView(
+                  onArCoreViewCreated: (controler) =>
+                      _onArCoreViewCreated(controler, Colors.red),
+                  enableTapRecognizer: true,
+                  enableUpdateListener: true,
+                )
+              : Center(
+                  child: Text('ArCoreView'),
+                ),
           anchorWasFound
               ? Container()
               : Column(
